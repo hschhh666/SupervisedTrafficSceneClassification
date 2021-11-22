@@ -120,7 +120,7 @@ def get_train_loader(args):
     train_transform = transforms.Compose([
         transforms.RandomResizedCrop(224, scale=(args.crop_low, 1.)),
         transforms.RandomHorizontalFlip(),
-        transforms.RandomVerticalFlip(),
+        # transforms.RandomVerticalFlip(),
         transforms.ToTensor(),
         transforms.Normalize(mean=mean, std=std),
     ])
