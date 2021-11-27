@@ -25,8 +25,7 @@ from myModel import myResnet50
 
 from util import accuracy, adjust_learning_rate, AverageMeter, classify,print_running_time, Logger
 from dataset import ImageFolderInstance
-
-
+from sklearn.metrics import classification_report, f1_score
 
 def parse_option():
 
@@ -262,6 +261,7 @@ def main():
     start_time = time.time()
     min_loss = np.inf
     max_val_acc = 0
+    best_fscore = 0
     best_model_path = args.resume
     for epoch in range(args.start_epoch, args.epochs + 1):
 
@@ -274,23 +274,36 @@ def main():
             model.eval()
             val_acces = AverageMeter()
             # 数据加载完毕
+            gt_labels = []
+            pred_labels = []
             for idx,(img, target, index) in enumerate(val_loader):
+                gt_labels += list(target.numpy())
                 bsz = img.size(0)
                 if torch.cuda.is_available():
                     img = img.cuda()
                     target = target.cuda()
                 out = model(img)
+                _, pred = out.topk(1, 1, True, True)
+                pred = pred.t().cpu()
+                pred_labels += list(pred.numpy()[0])
                 acc = accuracy(out, target)[0]
                 val_acces.update(acc.item(),bsz)
 
-            best_acc_tmp = val_acces.avg if max_val_acc < val_acces.avg else max_val_acc
-            print('Epoch %d Validation accuracy %.3f%%, best validation accuracy %.3f%%'%(epoch, val_acces.avg, best_acc_tmp))
+            fscore = f1_score(gt_labels, pred_labels, average = 'macro')
+            best_fscore_tmp = fscore if fscore > best_fscore else best_fscore
+            print('<================Val classification report================>')
+            print(classification_report(gt_labels, pred_labels, target_names=val_loader.dataset.classes, digits=3))
+            print('<================Val classification report================>')
+            print('Epoch %d F1-score %.3f, best F1-score %.3f'%(epoch, fscore, best_fscore_tmp))
+            max_val_acc = val_acces.avg if max_val_acc < val_acces.avg else max_val_acc
+            print('Epoch %d Validation accuracy %.3f%%, best validation accuracy %.3f%%'%(epoch, val_acces.avg, max_val_acc))
+            
 
             #<----------------------------保存最好的模型---------------------------->#
-            if max_val_acc < val_acces.avg:
-                if max_val_acc != 0:
+            if best_fscore < fscore:
+                if best_fscore != 0:
                     os.remove(best_model_path)
-                max_val_acc = val_acces.avg
+                best_fscore = fscore
                 best_model_path = os.path.join(args.model_folder, 'ckpt_epoch_{epoch}_Best.pth'.format(epoch=epoch))
                 print('==> Saving best model...')
                 state = {
