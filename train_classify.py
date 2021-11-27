@@ -104,6 +104,9 @@ def parse_option():
 
     print('start program at ' + time.strftime("%Y_%m_%d %H:%M:%S", time.localtime()))
     print('Dataset :', opt.data_folder)
+    
+    for arg in vars(opt):
+        print(arg, ':', getattr(opt, arg))  # getattr() 函数是获取args中arg的属性值
 
     if not os.path.isdir(opt.data_folder):
         raise ValueError('data path not exist: {}'.format(opt.data_folder))
