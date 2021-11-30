@@ -137,7 +137,7 @@ def get_train_loader(args):
     return train_loader
 
 def get_val_loader(args):
-    data_folder = os.path.join(args.data_folder,'val')
+    data_folder = os.path.join(args.test_data_folder)
     if not os.path.exists(data_folder):
         print('No validation data. It\'s ok, but there are no validation classiying results.')
         return None
