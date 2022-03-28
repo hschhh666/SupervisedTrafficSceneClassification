@@ -195,8 +195,8 @@ if __name__ == '__main__':
     parser.add_argument('--reduce_method', default='pca', type=str,help='feature dimention reduce method for visuilization, pca or tsne')
 
     args = parser.parse_args()
-    args.pretrained = '/home/hsc/Research/TrafficSceneClassification/runningSavePath/modelPath/20211222_19_41_09_lr_0.03_decay_0.0001_bsz_128_supervised12000/ckpt_epoch_14_Best.pth'
-    args.data = '/home/hsc/Research/TrafficSceneClassification/data/data_experiment/HSD_masked_12000'
+    args.pretrained = '/home/hsc/Research/TrafficSceneClassification/runningSavePath/modelPath/20211222_20_28_54_lr_0.03_decay_0.0001_bsz_128_supervised14000/ckpt_epoch_50_Best.pth'
+    args.data = '/home/hsc/Research/TrafficSceneClassification/data/data_experiment/HSD_masked'
     start = time.time()
     process_feature(args)
     print('Processing using time: %.0fs'%(time.time()-start))
