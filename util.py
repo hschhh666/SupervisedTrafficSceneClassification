@@ -14,6 +14,23 @@ from dataset import ImageFolderInstance
 from torchvision import transforms
 from torch.nn import functional as F
 
+def print_time(func):
+    def warp(*args, **kwargs):
+        print('==================== Start process function [%s]'%func.__name__, end = ', ')
+        print('time is ',time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),'====================')
+        start_time = time.time()
+        res = func(*args, **kwargs)
+        using_time = time.time()-start_time
+        hours = int(using_time/3600)
+        using_time -= hours*3600
+        minutes = int(using_time/60)
+        using_time -= minutes*60
+        print('Time is ',time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), end = ', ')
+        print('running %d h,%d m,%d s'%(hours,minutes,int(using_time)), end = ', ')
+        print('function [%s] done.'%func.__name__)
+        return res
+    return warp
+
 def print_running_time(start_time):
     print()
     print('='*20,end = ' ')

@@ -26,6 +26,7 @@ from myModel import myResnet50
 from util import accuracy, adjust_learning_rate, AverageMeter, classify,print_running_time, Logger
 from dataset import ImageFolderInstance
 from sklearn.metrics import classification_report, f1_score
+from processVideo import process_video
 
 def parse_option():
 
@@ -50,17 +51,13 @@ def parse_option():
     # resume path
     parser.add_argument('--resume', default='', type=str, metavar='PATH',help='path to latest checkpoint (default: none)')
 
-    parser.add_argument('--class_num', type=int, default=4)
-
     # specify folder
     parser.add_argument('--data_folder', type=str, default=None, help='path to training data') # 训练数据文件夹，即锚点/正负样本文件夹
     parser.add_argument('--test_data_folder', type=str, default=None, help='path to testing data') # 测试数据文件夹，即所有视频帧的文件夹
     parser.add_argument('--validation_frequency',type=int, default=1) # 训练过程中验证分类精度的频率，比如每个epoch都在验证集上测试并输出分类精度，或者每十个epoch在验证集上测试等
-    parser.add_argument('--model_path', type=str, default=None, help='path to save model')
-    parser.add_argument('--tb_path', type=str, default=None, help='path to tensorboard')
-    parser.add_argument('--log_txt_path', type=str, default=None, help='path to log file')
-    parser.add_argument('--result_path', type=str, default=None, help='path to sample dis and img case study') # 训练结束后，图像间距离的case study保存在这个路径下
-
+    parser.add_argument('--running_save_path', type=str, default=None, help='path to save data')
+    
+    parser.add_argument('--video_path',type=str, default=None) #训练结束后计算视频的特征，这里指定视频所在的文件夹
     # data crop threshold
     parser.add_argument('--crop_low', type=float, default=0.8, help='low area in crop')
 
@@ -77,14 +74,19 @@ def parse_option():
     
     opt.model_name = '{}_lr_{}_decay_{}_bsz_{}_{}'.format(curTime, opt.learning_rate, opt.weight_decay, opt.batch_size, opt.comment_info)
 
-    if (opt.data_folder is None) or (opt.model_path is None) or (opt.tb_path is None) or (opt.log_txt_path is None) or (opt.result_path is None) or (opt.test_data_folder is None):
+    opt.model_path = os.path.join(opt.running_save_path, 'modelPath')
+    opt.log_txt_path = os.path.join(opt.running_save_path, 'logPath')
+    opt.result_path = os.path.join(opt.running_save_path, 'resultPath')
+    opt.tb_folder = os.path.join(opt.running_save_path, 'tbPath')
+
+    if (opt.data_folder is None) or (opt.model_path is None) or (opt.tb_folder is None) or (opt.log_txt_path is None) or (opt.result_path is None) or (opt.test_data_folder is None):
         raise ValueError('one or more of the folders is None: data_folder | model_path | tb_path | log_txt_path | result_path | test_data_folder')
 
     opt.model_folder = os.path.join(opt.model_path, opt.model_name)
     if not os.path.isdir(opt.model_folder):
         os.makedirs(opt.model_folder)
 
-    opt.tb_folder = os.path.join(opt.tb_path, opt.model_name)
+    opt.tb_folder = os.path.join(opt.tb_folder, opt.model_name)
     if not os.path.isdir(opt.tb_folder):
         os.makedirs(opt.tb_folder)
 
@@ -128,6 +130,7 @@ def get_train_loader(args):
     ])
     
     train_dataset = ImageFolderInstance(data_folder, transform=train_transform)
+    args.class_num = len(train_dataset.classes)
 
     n_data = len(train_dataset)
     print('number of samples: {}'.format(n_data))
@@ -289,12 +292,13 @@ def main():
                 acc = accuracy(out, target)[0]
                 val_acces.update(acc.item(),bsz)
 
-            fscore = f1_score(gt_labels, pred_labels, average = 'macro')
-            best_fscore_tmp = fscore if fscore > best_fscore else best_fscore
-            print('<================Val classification report================>')
-            print(classification_report(gt_labels, pred_labels, target_names=val_loader.dataset.classes, digits=3))
-            print('<================Val classification report================>')
-            print('Epoch %d F1-score %.3f, best F1-score %.3f'%(epoch, fscore, best_fscore_tmp))
+            fscore = val_acces.avg    
+            # fscore = f1_score(gt_labels, pred_labels, average = 'macro')
+            # best_fscore_tmp = fscore if fscore > best_fscore else best_fscore
+            # print('<================Val classification report================>')
+            # print(classification_report(gt_labels, pred_labels, target_names=val_loader.dataset.classes, digits=3))
+            # print('<================Val classification report================>')
+            # print('Epoch %d F1-score %.3f, best F1-score %.3f'%(epoch, fscore, best_fscore_tmp))
             max_val_acc = val_acces.avg if max_val_acc < val_acces.avg else max_val_acc
             print('Epoch %d Validation accuracy %.3f%%, best validation accuracy %.3f%%'%(epoch, val_acces.avg, max_val_acc))
             
@@ -351,7 +355,9 @@ def main():
     model.eval()
     
     print('Classifying...')
-    classify(model, args)
+    # classify(model, args)
+    args.pretrained = best_model_path
+    process_video(model, args)
 
     print('Done.\n\n')
     print('Program exit normally.')
